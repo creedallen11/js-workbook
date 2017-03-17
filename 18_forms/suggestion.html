@@ -1,0 +1,31 @@
+<input type="text" id="field">
+<div id="suggestions" style="cursor: pointer"></div>
+
+<script>
+  // Builds up an array with global variable names, like
+  // 'alert', 'document', and 'scrollTo'
+  var terms = [];
+  for (var name in window) {
+    terms.push(name);
+  }
+  var textField = document.querySelector("#field");
+  var suggestions = document.querySelector("#suggestions");
+  textField.addEventListener("input", function() {
+    var text = textField.value;
+    var candidates = [];
+    terms.forEach(function(term) {
+      if (term.startsWith(text))
+        candidates.push(term);
+    });
+	suggestions.textContent = "";
+    candidates.forEach(function(term) {
+      var node = document.createElement("div");
+      node.textContent = term;
+      node.addEventListener("click", function() {
+        textField.value = term;
+        suggestions.textContent = "";
+      });
+      suggestions.appendChild(node);
+    });
+  });
+</script>

@@ -1,0 +1,25 @@
+<!doctype html>
+
+<input type="text">
+<script>
+  var field = document.querySelector("input");
+  field.addEventListener("keydown", function(event) {
+    var forbidden = [81, 87, 88];
+    if (forbidden.includes(event.keyCode)) {
+      event.preventDefault();
+    }
+  });
+</script>
+
+
+<!-- <script>
+  var field = document.querySelector("input");
+  field.addEventListener("keydown", function(event) {
+    if (event.keyCode == "Q".charCodeAt(0) ||
+        event.keyCode == "W".charCodeAt(0) ||
+        event.keyCode == "X".charCodeAt(0))
+      event.preventDefault();
+  });
+	// a possible way to test if using keypress
+  /[qwx]/i.test(String.fromCharCode(event.charCode))
+</script> -->

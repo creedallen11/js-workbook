@@ -1,0 +1,20 @@
+<div id="grid"></div>
+<button id="next">Next generation</button>
+
+<script>
+	var height = 16, width = 32;
+
+	var grid = document.querySelector("#grid");
+
+	var checkboxes = [];
+	for (var y = 0; y < height; y++) {
+		for (var x = 0; x < width; x++) {
+			var box = document.createElement("input");
+			box.type = "checkbox";
+			grid.appendChild(box);
+			checkboxes.push(box);
+		}
+		grid.appendChild(document.createElement("br"));
+	}
+
+</script>
