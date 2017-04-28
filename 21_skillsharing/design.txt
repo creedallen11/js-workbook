@@ -1,0 +1,77 @@
+server part:
+- written for node 
+- store the systems data and provide to client
+- keep a list of TALKS proposed for next meeting
+
+client part:
+- allows users to propose new TALKS
+- delete talks
+- comment on existing talks
+
+TALK:
+- presenter name
+- a title
+- a summary
+- a list of comments associated with it
+
+
+- application will show a live view of current proposed talks/comments
+- changes should be immediate (long polling)
+
+Long Polling:
+- we could use web sockets, but will use long polling
+- client continuously asks server for new info using http requests
+- server stalls its answer unless it has something new to report
+- periodic timed response to prevent timeout 
+
+
+HTTP Interface:
+- base interface on JSON
+- centered around the /talks path
+- paths that do not start with /talks will be used for serving static files
+  (the html and javascript code that implements the client side)
+- {"serverTime": 1405438911833,
+  "talks": [{"title": "Unituning",
+            "presenter": "Carlos",
+            "summary": "Modifying your cycle for extra style",
+            "comment": []}]}
+- serverTiime for long polling 
+
+- create a talk by making a PUT request to a URL like /talks/Unituning, this
+  PUT should have presenter and summary
+- use of encode URIComponent to convert titles to URL 
+- example:
+	PUT /talks/How%20to%20Idle HTTP/1.1
+	Content-Type: application/json
+	Content-Length: 92
+	{"presenter": "Dana", "summary": "Standing still on a unicycle"}
+- also support GET to retrieve the JSON representation of a talk and DELETE
+
+- adding a comment done with a POST request to a URL like /talks/Unituning/comments
+- example:
+	POST /talks/Unituning/comments HTTP/1.1
+	Content-Type: application/json
+	Content-Lenght: 72
+	{"author": "Alice", "message": "Will you talk about raising a cycle?"}
+
+- the GET request will include a changesSince parameter that will respond with a change
+  or after 90 seconds.
+- example:
+  GET /talks?changesSince1405438911833 HTTP/1.1
+
+  (time passes)
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Content-Length: 95
+  {"serverTime": 1405438913401,
+  "talks": [{"title": "Unituning",
+            "deleted": true}]}
+
+- when a talk is deleted, only its title and deleted property are included
+- client will also add new talks to its display, update talks it was showing, remove deleted
+- consider reverse proxy to protect server
+
+Routing:
+- router to dispatch incoming server requests to the appropriate function handler
+- ie /talks/followedbytalktitle -> PUT handler
+- design a router to demonstrate but node contains many in NPM

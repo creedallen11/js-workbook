@@ -1,6 +1,6 @@
-/*Helper to create DOM elements.
-name - 
-*/
+/* Helper to create DOM elements.
+Creates element with given name and attributes (JSON) and appends further
+args it gets as child nodes. */
 function elt(name, attributes) {
   var node = document.createElement(name);
   if (attributes) {
@@ -17,19 +17,22 @@ function elt(name, attributes) {
   return node;
 }
 
-var controls = Object.create(null);
+/* Container for controls of the tools */
+var controls = Object.create(null); // does not inherit from Object like {}
 
+/* Primary function. Appends paint interface to the parent DOM element. */
 function createPaint(parent) {
   var canvas = elt("canvas", {width: 500, height: 300});
   var cx = canvas.getContext("2d");
   var toolbar = elt("div", {class: "toolbar"});
   for (var name in controls)
-    toolbar.appendChild(controls[name](cx));
+    toolbar.appendChild(controls[name](cx)); // call control fun w/cx as argument
 
   var panel = elt("div", {class: "picturepanel"}, canvas);
   parent.appendChild(elt("div", null, panel, toolbar));
 }
 
+/* Drawing tools */
 var tools = Object.create(null);
 
 controls.tool = function(cx) {
@@ -39,8 +42,8 @@ controls.tool = function(cx) {
 
   cx.canvas.addEventListener("mousedown", function(event) {
     if (event.which == 1) {
-      tools[select.value](event, cx);
-      event.preventDefault();
+      tools[select.value](event, cx); // call handler for tool 
+      event.preventDefault(); // so browser doesnt start to highlight page
     }
   });
 
@@ -53,6 +56,8 @@ function relativePos(event, element) {
           y: Math.floor(event.clientY - rect.top)};
 }
 
+/* onMove is the function to call for each "mousemove" event the other
+is the function to call on release. Either can be ommited */
 function trackDrag(onMove, onEnd) {
   function end(event) {
     removeEventListener("mousemove", onMove);
@@ -64,6 +69,7 @@ function trackDrag(onMove, onEnd) {
   addEventListener("mouseup", end);
 }
 
+/* mousedown event line draw tool */
 tools.Line = function(event, cx, onEnd) {
   cx.lineCap = "round";
 
@@ -77,6 +83,7 @@ tools.Line = function(event, cx, onEnd) {
   }, onEnd);
 };
 
+/* mousedown event handler for erase tool */
 tools.Erase = function(event, cx) {
   cx.globalCompositeOperation = "destination-out";
   tools.Line(event, cx, function() {
@@ -84,6 +91,9 @@ tools.Erase = function(event, cx) {
   });
 };
 
+/* At this point we have a working line draw tool and working erase. */ 
+
+/* add a tool for color, probably wont work in IE, user will have to enter text */
 controls.color = function(cx) {
   var input = elt("input", {type: "color"});
   input.addEventListener("change", function() {
@@ -93,6 +103,7 @@ controls.color = function(cx) {
   return elt("span", null, "Color: ", input);
 };
 
+/* add a tool for brush size */
 controls.brushSize = function(cx) {
   var select = elt("select");
   var sizes = [1, 2, 3, 5, 8, 12, 25, 35, 50, 75, 100];
@@ -151,6 +162,7 @@ controls.openFile = function(cx) {
   return elt("div", null, "Open file: ", input);
 };
 
+
 controls.openURL = function(cx) {
   var input = elt("input", {type: "text"});
   var form = elt("form", null,
@@ -167,7 +179,8 @@ tools.Text = function(event, cx) {
   var text = prompt("Text:", "");
   if (text) {
     var pos = relativePos(event, cx.canvas);
-    cx.font = Math.max(7, cx.lineWidth) + "px sans-serif";
+    // could improve below to add font options
+    cx.font = Math.max(7, cx.lineWidth) + "px sans-serif"; //unreadable below 7
     cx.fillText(text, pos.x, pos.y);
   }
 };
@@ -200,3 +213,55 @@ function randomPointInRadius(radius) {
       return {x: x * radius, y: y * radius};
   }
 }
+
+function rectangleFrom(a, b) {
+    return {left: Math.min(a.x, b.x),
+            top: Math.min(a.y, b.y),
+            width: Math.abs(a.x - b.x),
+            height: Math.abs(a.y - b.y)};
+}
+
+tools.Rectangle = function(event, cx) {
+  var relativeStart = relativePos(event, cx.canvas);
+  var pageStart = {x: event.pageX, y: event.pageY};
+
+  var trackingNode = document.createElement("div");
+  trackingNode.style.position = "absolute";
+  trackingNode.style.background = cx.fillStyle;
+  document.body.appendChild(trackingNode);
+
+  trackDrag(function(event) {
+      var rect = rectangleFrom(pageStart,
+                               {x: event.pageX, y: event.pageY});
+      trackingNode.style.left = rect.left + "px";
+      trackingNode.style.top = rect.top + "px";
+      trackingNode.style.width = rect.width + "px";
+      trackingNode.style.height = rect.height + "px";
+    }, function(event) {
+      var rect = rectangleFrom(relativeStart,
+                               relativePos(event, cx.canvas));
+      cx.fillRect(rect.left, rect.top, rect.width, rect.height);
+      document.body.removeChild(trackingNode);
+    });
+}
+
+function colorAt(cx, x, y) {
+  var pixel = cx.getImageData(x, y, 1, 1).data;
+  return "rgb(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ")";
+}
+
+tools["Pick color"] = function(event, cx) {
+  var pos = relativePos(event, cx.canvas);
+  try {
+    var color = colorAt(cx, pos.x, pos.y);
+  } catch(e) {
+    if (e instanceof SecurityError) {
+      alert("Unable to access your picture's pixel data");
+      return;
+    } else {
+      throw e;
+    }
+  }
+  cx.fillStyle = color;
+  cx.strokeStyle = color;
+};
